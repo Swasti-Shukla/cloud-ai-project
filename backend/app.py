@@ -36,7 +36,8 @@ CORS(app)
 # PASTE YOUR FREE GEMINI API KEY HERE
 # Get it free from: https://aistudio.google.com/app/apikey
 # ============================================================
-GEMINI_API_KEY = "YOUR_KEY_HERE"
+import os
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ============================================================
 # LOAD ML MODEL
