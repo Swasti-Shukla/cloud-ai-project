@@ -30,7 +30,7 @@ import urllib.error
 import json
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins="*")
 
 # ============================================================
 # PASTE YOUR FREE GEMINI API KEY HERE
