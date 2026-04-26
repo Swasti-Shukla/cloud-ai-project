@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Resource Deployment Planning Agent</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+    body { background:#0f172a; color:#f1f5f9; min-height:100vh; }
+
+    /* HEADER */
+    .header {
+      background:#1e293b;
+      padding:14px 24px;
+      border-bottom:2px solid #334155;
+      display:flex; align-items:center; gap:14px;
+    }
+    .logo {
+      width:46px; height:46px;
+      background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+      border-radius:12px;
+      display:flex; align-items:center; justify-content:center; font-size:24px;
+    }
+    .header h1 { font-size:17px; }
+    .header p  { font-size:11px; color:#94a3b8; margin-top:3px; }
+
+    /* AI badges shown in header */
+    .badges { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+    .ai-badge {
+      padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold;
+      border:1px solid;
+    }
+    .badge-ml  { background:#052e16; color:#6ee7b7; border-color:#10b981; }
+    .badge-llm { background:#1e1b4b; color:#a5b4fc; border-color:#6366f1; }
+
+    /* LAYOUT */
+    .layout { display:flex; height:calc(100vh - 74px); }
+
+    /* LEFT PANEL */
+    .left {
+      width:355px; background:#1e293b;
+      border-right:1px solid #334155;
+      padding:20px; overflow-y:auto; flex-shrink:0;
+    }
+    .section-title {
+      font-size:11px; font-weight:bold; text-transform:uppercase;
+      letter-spacing:1px; color:#64748b; margin-bottom:14px;
+    }
+    .input-group { margin-bottom:18px; }
+    .input-group label {
+      display:flex; justify-content:space-between;
+      font-size:13px; color:#94a3b8; margin-bottom:7px;
+    }
+    .input-group label span { color:#f1f5f9; font-weight:bold; }
+    input[type="range"] { width:100%; accent-color:#3b82f6; cursor:pointer; }
+    .number-input {
+      width:100%; background:#273549; border:1px solid #334155;
+      color:#f1f5f9; padding:10px 12px; border-radius:8px;
+      font-size:14px; outline:none;
+    }
+    .number-input:focus { border-color:#3b82f6; }
+    .input-hint { font-size:11px; color:#475569; margin-top:5px; }
+
+    .predict-btn {
+      width:100%; padding:14px;
+      background:linear-gradient(135deg,#3b82f6,#6366f1);
+      color:white; border:none; border-radius:10px;
+      font-size:15px; font-weight:bold; cursor:pointer; margin-top:5px;
+    }
+    .predict-btn:hover    { opacity:0.9; }
+    .predict-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+    /* AI info box in sidebar */
+    .ai-info-box {
+      margin-top:16px; background:#273549;
+      border:1px solid #334155; border-radius:10px; padding:14px;
+    }
+    .ai-row { display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; }
+    .ai-row:last-child { margin-bottom:0; }
+    .ai-icon { font-size:20px; flex-shrink:0; margin-top:2px; }
+    .ai-row h4 { font-size:12px; font-weight:bold; color:#f1f5f9; margin-bottom:3px; }
+    .ai-row p  { font-size:11px; color:#64748b; line-height:1.6; }
+
+    /* Preset buttons */
+    .preset-box {
+      margin-top:14px; background:#273549;
+      border:1px solid #334155; border-radius:10px; padding:14px;
+    }
+    .preset-btn {
+      display:block; width:100%; text-align:left;
+      background:none; border:1px solid #334155; color:#94a3b8;
+      padding:9px 12px; border-radius:8px; cursor:pointer;
+      font-size:12px; margin-bottom:7px;
+    }
+    .preset-btn:last-child { margin-bottom:0; }
+    .preset-btn:hover { border-color:#3b82f6; color:#f1f5f9; }
+
+    /* RIGHT PANEL */
+    .right { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+    .tabs { display:flex; background:#1e293b; border-bottom:1px solid #334155; }
+    .tab-btn {
+      padding:13px 22px; font-size:13px; color:#64748b;
+      background:none; border:none;
+      border-bottom:3px solid transparent; cursor:pointer; font-weight:500;
+    }
+    .tab-btn.active { color:#3b82f6; border-bottom-color:#3b82f6; }
+
+    .tab-content { flex:1; overflow-y:auto; }
+    .tab-panel   { display:none; padding:24px; }
+    .tab-panel.active { display:block; }
+
+    /* PLACEHOLDER */
+    .placeholder { text-align:center; padding:80px 20px; color:#475569; }
+    .placeholder .emoji { font-size:60px; margin-bottom:15px; }
+    .placeholder h2 { font-size:20px; color:#64748b; margin-bottom:10px; }
+
+    /* RESULT CARD */
+    .result-card {
+      background:#1e293b; border:1px solid #334155;
+      border-radius:14px; padding:24px; margin-bottom:16px;
+      position:relative; overflow:hidden;
+    }
+    .result-card::before {
+      content:''; position:absolute; top:0; left:0; right:0;
+      height:4px; background:linear-gradient(90deg,#3b82f6,#8b5cf6);
+    }
+    .instance-big { font-size:34px; font-weight:bold; margin-bottom:4px; }
+    .instance-cat { font-size:14px; color:#94a3b8; margin-bottom:18px; }
+
+    .stats {
+      display:grid; grid-template-columns:repeat(4,1fr);
+      gap:10px; margin-bottom:16px;
+    }
+    .stat {
+      background:#273549; border:1px solid #334155;
+      border-radius:10px; padding:12px; text-align:center;
+    }
+    .stat .val { font-size:20px; font-weight:bold; }
+    .stat .key { font-size:11px; color:#64748b; margin-top:4px; }
+
+    .info-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .info-box { background:#273549; border-radius:8px; padding:12px; font-size:12px; line-height:1.7; }
+    .info-box .info-title { font-weight:bold; margin-bottom:5px; font-size:12px; }
+
+    .tip-box {
+      background:#1d3a5c; border:1px solid #2563eb;
+      border-radius:8px; padding:12px 14px;
+      font-size:13px; color:#93c5fd; margin-bottom:14px;
+    }
+
+    /* ML label tag on result */
+    .ml-tag {
+      display:inline-block; padding:3px 8px; border-radius:6px;
+      font-size:10px; font-weight:bold;
+      background:#052e16; color:#6ee7b7; border:1px solid #10b981;
+      margin-bottom:8px;
+    }
+
+    /* OVER BUDGET */
+    .budget-warning {
+      background:#3b1c1c; border:2px solid #ef4444;
+      border-radius:12px; padding:20px; margin-bottom:16px;
+    }
+    .budget-warning h3 { color:#ef4444; font-size:16px; margin-bottom:10px; }
+    .budget-warning p  { font-size:13px; color:#fca5a5; line-height:1.6; }
+
+    .alternative-card {
+      background:#1a3a1a; border:2px solid #10b981;
+      border-radius:12px; padding:20px; margin-bottom:16px;
+    }
+    .alternative-card h3 { color:#10b981; font-size:16px; margin-bottom:10px; }
+    .alt-name { font-size:26px; font-weight:bold; margin-bottom:4px; }
+    .alt-sub  { font-size:13px; color:#6ee7b7; margin-bottom:12px; }
+    .alt-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .alt-stat  { background:#0f2d0f; border-radius:8px; padding:10px; text-align:center; }
+    .alt-stat .val { font-size:16px; font-weight:bold; }
+    .alt-stat .key { font-size:11px; color:#6ee7b7; margin-top:3px; }
+
+    /* PROB BARS */
+    .prob-section {
+      background:#1e293b; border:1px solid #334155;
+      border-radius:12px; padding:20px; margin-bottom:16px;
+    }
+    .prob-row    { margin-bottom:12px; }
+    .prob-header {
+      display:flex; justify-content:space-between;
+      font-size:13px; margin-bottom:5px; align-items:center;
+    }
+    .prob-track { height:10px; background:#273549; border-radius:5px; overflow:hidden; }
+    .prob-fill  { height:100%; border-radius:5px; transition:width 0.8s ease; }
+    .fits-badge { font-size:10px; padding:2px 6px; border-radius:10px; margin-left:6px; }
+    .fits-yes   { background:#052e16; color:#6ee7b7; }
+    .fits-no    { background:#3b1c1c; color:#fca5a5; }
+
+    /* CHAT */
+    .chat-wrap { display:flex; flex-direction:column; height:calc(100vh - 140px); }
+    .chat-msgs {
+      flex:1; overflow-y:auto; padding:20px;
+      display:flex; flex-direction:column; gap:14px;
+    }
+    .msg      { max-width:78%; }
+    .msg.user { align-self:flex-end; }
+    .msg.bot  { align-self:flex-start; }
+    .msg-label { font-size:11px; color:#64748b; margin-bottom:5px; }
+    .msg.user .msg-label { text-align:right; }
+    .bubble {
+      padding:12px 15px; border-radius:12px;
+      font-size:13px; line-height:1.8; white-space:pre-wrap;
+    }
+    .msg.user .bubble { background:#3b82f6; color:white; border-bottom-right-radius:3px; }
+    .msg.bot  .bubble { background:#273549; border:1px solid #334155; border-bottom-left-radius:3px; }
+
+    /* powered by tag inside chat bubble */
+    .powered-by {
+      font-size:10px; color:#64748b; margin-top:8px;
+      padding-top:8px; border-top:1px solid #334155;
+    }
+
+    .quick-btns { display:flex; flex-wrap:wrap; gap:7px; padding:8px 18px; }
+    .quick-btn  {
+      padding:5px 12px; background:#273549;
+      border:1px solid #334155; color:#94a3b8;
+      border-radius:20px; font-size:11px; cursor:pointer;
+    }
+    .quick-btn:hover { border-color:#3b82f6; color:#f1f5f9; }
+
+    .chat-input-row { padding:14px 18px; border-top:1px solid #334155; display:flex; gap:10px; }
+    .chat-input {
+      flex:1; background:#273549; border:1px solid #334155;
+      color:#f1f5f9; padding:10px 14px; border-radius:10px;
+      font-size:13px; outline:none;
+    }
+    .chat-input:focus { border-color:#3b82f6; }
+    .send-btn {
+      padding:10px 20px; background:#3b82f6; color:white;
+      border:none; border-radius:10px; cursor:pointer;
+      font-weight:bold; font-size:13px;
+    }
+    .send-btn:disabled { opacity:0.4; }
+
+    /* LLM notice box in chat */
+    .llm-notice {
+      background:#1e1b4b; border:1px solid #4f46e5;
+      border-radius:10px; padding:14px; margin-bottom:14px; font-size:12px;
+    }
+    .llm-notice h4 { color:#a5b4fc; margin-bottom:6px; font-size:13px; }
+    .llm-notice p  { color:#818cf8; line-height:1.7; }
+    .llm-notice code {
+      background:#312e81; padding:2px 6px; border-radius:4px;
+      font-size:11px; color:#c7d2fe;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">☁️</div>
+  <div>
+    <h1>Cloud Resource Deployment Planning Agent</h1>
+    <p>Enter requirements → ML model recommends → LLM explains</p>
+  </div>
+  <div class="badges">
+    <span class="ai-badge badge-ml">🤖 AI: Random Forest ML</span>
+    <span class="ai-badge badge-llm">💬 LLM: Google Gemini</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="section-title">📋 Your Requirements</div>
+
+    <div class="input-group">
+      <label>Number of Users (per day) <span id="users-label">500</span></label>
+      <input type="range" id="users" min="10" max="60000" value="500" step="10"
+             oninput="document.getElementById('users-label').textContent=Number(this.value).toLocaleString()">
+      <div class="input-hint">How many people will use your app daily?</div>
+    </div>
+
+    <div class="input-group">
+      <label>Storage Needed <span id="storage-label">100 GB</span></label>
+      <input type="range" id="storage" min="5" max="5000" value="100" step="5"
+             oninput="document.getElementById('storage-label').textContent=this.value+' GB'">
+      <div class="input-hint">Total storage for your app and database</div>
+    </div>
+
+    <div class="input-group">
+      <label>Monthly Budget (₹ Rupees)</label>
+      <input type="number" class="number-input" id="budget"
+             min="5" max="300" value="30" placeholder="Your monthly budget in ₹">
+      <div class="input-hint">Maximum you can spend per month (in Rupees)</div>
+    </div>
+
+    <div class="input-group">
+      <label>Expected Traffic <span id="traffic-label">50 req/sec</span></label>
+      <input type="range" id="traffic" min="1" max="1600" value="50"
+             oninput="document.getElementById('traffic-label').textContent=this.value+' req/sec'">
+      <div class="input-hint">Website page loads per second</div>
+    </div>
+
+    <button class="predict-btn" id="predict-btn" onclick="predict()">
+      🔍 Find Best AWS Instance
+    </button>
+
+    <!-- AI explanation box -->
+    <div class="ai-info-box">
+      <div class="section-title">🧠 AI Used in This Project</div>
+      <div class="ai-row">
+        <div class="ai-icon">🤖</div>
+        <div>
+          <h4>ML Model — Random Forest</h4>
+          <p>Trained on 3,000 examples. Predicts the best AWS instance for your inputs. Accuracy: 96%</p>
+        </div>
+      </div>
+      <div class="ai-row">
+        <div class="ai-icon">💬</div>
+        <div>
+          <h4>LLM — Google Gemini</h4>
+          <p>Large Language Model. Answers your questions in natural language. Add free API key to activate.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="preset-box">
+      <div class="section-title">💡 Quick Examples</div>
+      <button class="preset-btn" onclick="setPreset(100,20,800,5)">🎓 Student Project (₹800 budget)</button>
+      <button class="preset-btn" onclick="setPreset(500,50,1500,20)">🏠 Personal Website (₹1,500 budget)</button>
+      <button class="preset-btn" onclick="setPreset(2000,100,2500,100)">🛒 Small Online Store (₹2,500 budget)</button>
+      <button class="preset-btn" onclick="setPreset(10000,500,5000,400)">🚀 Growing Startup (₹5,000 budget)</button>
+      <button class="preset-btn" onclick="setPreset(40000,1000,11000,1000)">🏢 Large Platform (₹11,000 budget)</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('result',this)">📊 ML Recommendation</button>
+      <button class="tab-btn" onclick="switchTab('chat',this)">💬 Ask LLM Agent</button>
+    </div>
+
+    <div class="tab-content">
+
+      <!-- RESULT TAB -->
+      <div class="tab-panel active" id="tab-result">
+        <div class="placeholder" id="placeholder">
+          <div class="emoji">☁️</div>
+          <h2>No recommendation yet</h2>
+          <p style="margin-top:10px; font-size:14px;">
+            Enter your requirements on the left<br>
+            and click <strong>"Find Best AWS Instance"</strong>
+          </p>
+        </div>
+
+        <div id="result-area" style="display:none">
+
+          <!-- Main result -->
+          <div class="result-card">
+            <div class="ml-tag">🤖 Random Forest ML Model — 96% Accuracy</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+              <div>
+                <div style="font-size:12px; color:#64748b; margin-bottom:5px;">✅ Recommended AWS Instance:</div>
+                <div class="instance-big" id="res-name">—</div>
+                <div class="instance-cat" id="res-cat">—</div>
+              </div>
+              <div style="text-align:right;">
+                <div id="res-badge" style="padding:5px 14px; border-radius:20px; font-size:13px; font-weight:bold; display:inline-block; border:1px solid;"></div>
+                <div style="font-size:12px; color:#64748b; margin-top:8px;">
+                  ML Confidence: <strong id="res-conf" style="color:#10b981;">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="stats">
+              <div class="stat"><div class="val" id="res-vcpu">—</div><div class="key">vCPUs</div></div>
+              <div class="stat"><div class="val" id="res-ram">—</div><div class="key">RAM (GB)</div></div>
+              <div class="stat"><div class="val" id="res-cost">—</div><div class="key">₹/month</div></div>
+              <div class="stat"><div class="val" id="res-users">—</div><div class="key">Max Users</div></div>
+            </div>
+
+            <div class="info-row">
+              <div class="info-box">
+                <div class="info-title" style="color:#10b981;">✅ Good for:</div>
+                <span id="res-good">—</span>
+              </div>
+              <div class="info-box">
+                <div class="info-title" style="color:#ef4444;">❌ Not ideal for:</div>
+                <span id="res-notgood">—</span>
+              </div>
+            </div>
+
+            <div class="tip-box">💡 <strong>Tip:</strong> <span id="res-tip">—</span></div>
+
+            <div id="storage-notice" style="display:none; background:#273549; border-radius:8px; padding:12px; font-size:13px; color:#94a3b8; margin-bottom:12px;"></div>
+
+            <button onclick="goToChat()" style="padding:9px 16px; background:#273549; border:1px solid #334155; color:#f1f5f9; border-radius:8px; cursor:pointer; font-size:13px;">
+              💬 Ask LLM to explain this
+            </button>
+          </div>
+
+          <!-- Over budget warning -->
+          <div class="budget-warning" id="budget-warning" style="display:none;">
+            <h3>⚠️ This instance is over your budget!</h3>
+            <p id="budget-warning-text">—</p>
+          </div>
+
+          <!-- Affordable alternative -->
+          <div class="alternative-card" id="alternative-card" style="display:none;">
+            <h3>💚 Best Option Within Your Budget:</h3>
+            <div class="alt-name" id="alt-name">—</div>
+            <div class="alt-sub"  id="alt-sub">—</div>
+            <div class="alt-stats">
+              <div class="alt-stat"><div class="val" id="alt-cost">—</div><div class="key">₹/month</div></div>
+              <div class="alt-stat"><div class="val" id="alt-users">—</div><div class="key">Max Users</div></div>
+              <div class="alt-stat"><div class="val" id="alt-ram">—</div><div class="key">RAM (GB)</div></div>
+            </div>
+            <p style="font-size:12px; color:#6ee7b7; margin-top:12px;">
+              ✅ Fits your budget. You can upgrade later as your app grows!
+            </p>
+          </div>
+
+          <!-- Probability bars -->
+          <div class="prob-section">
+            <div class="section-title">📊 ML Model Confidence — All Instances</div>
+            <div id="prob-bars"></div>
+            <p style="font-size:11px; color:#475569; margin-top:10px;">
+              🟢 fits your budget &nbsp;|&nbsp; 🔴 over your budget
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CHAT TAB -->
+      <div class="tab-panel" id="tab-chat">
+        <div class="chat-wrap">
+
+          <!-- LLM info notice -->
+          <div class="llm-notice" style="margin:16px 16px 0;">
+            <h4>💬 LLM Chat — Powered by Google Gemini</h4>
+            <p>
+              This chat uses a <strong>Large Language Model (LLM)</strong> to answer your questions.<br>
+              To activate full AI: open <code>backend/app.py</code>, find <code>YOUR_KEY_HERE</code>
+              and replace with your free key from
+              <strong>aistudio.google.com/app/apikey</strong><br>
+              Without a key, it still works in demo mode with pre-written answers.
+            </p>
+          </div>
+
+          <div class="chat-msgs" id="chat-msgs">
+            <div class="msg bot">
+              <div class="msg-label">💬 LLM Cloud Agent</div>
+              <div class="bubble">👋 Hello! I am your Cloud Computing Assistant powered by LLM!
+
+I can answer questions like:
+→ What is AWS?
+→ What if I am over budget?
+→ How many users can t3.medium handle?
+→ How do I upgrade my server?
+→ What is the difference between ML and LLM?
+
+First get a recommendation from the ML tab,
+then come here and ask me to explain it!</div>
+            </div>
+          </div>
+
+          <div class="quick-btns">
+            <button class="quick-btn" onclick="askQuick('What is AWS?')">What is AWS?</button>
+            <button class="quick-btn" onclick="askQuick('What if I am over budget?')">Over budget?</button>
+            <button class="quick-btn" onclick="askQuick('How many users can each instance handle?')">Users per instance?</button>
+            <button class="quick-btn" onclick="askQuick('How do I upgrade when my app grows?')">How to upgrade?</button>
+            <button class="quick-btn" onclick="askQuick('What is the difference between ML and LLM?')">ML vs LLM?</button>
+          </div>
+
+          <div class="chat-input-row">
+            <input type="text" class="chat-input" id="chat-input"
+                   placeholder="Ask anything about cloud computing..."
+                   onkeydown="if(event.key==='Enter') sendMessage()">
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const SERVER = 'http://localhost:5000';
+  let lastResult = null;
+
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function setPreset(users, storage, budget, traffic) {
+    document.getElementById('users').value   = users;
+    document.getElementById('users-label').textContent = Number(users).toLocaleString();
+    document.getElementById('storage').value = storage;
+    document.getElementById('storage-label').textContent = storage + ' GB';
+    document.getElementById('budget').value  = budget;
+    document.getElementById('traffic').value = traffic;
+    document.getElementById('traffic-label').textContent = traffic + ' req/sec';
+  }
+
+  async function predict() {
+    const users   = parseInt(document.getElementById('users').value);
+    const storage = parseInt(document.getElementById('storage').value);
+    const budget  = parseInt(document.getElementById('budget').value);
+    const traffic = parseInt(document.getElementById('traffic').value);
+
+    if (!budget || budget < 5) { alert('Please enter a budget of at least $5'); return; }
+
+    const btn = document.getElementById('predict-btn');
+    btn.textContent = '⏳ ML Model Analysing...';
+    btn.disabled = true;
+
+    try {
+      const res  = await fetch(SERVER + '/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ users, storage, budget, traffic })
+      });
+      const data = await res.json();
+      if (data.success) { lastResult = data; showResult(data); document.querySelectorAll('.tab-btn')[0].click(); }
+    } catch (e) {
+      alert('❌ Cannot connect to server!\n\nMake sure you ran:\npython backend/app.py');
+    }
+
+    btn.textContent = '🔍 Find Best AWS Instance';
+    btn.disabled = false;
+  }
+
+  function showResult(data) {
+    document.getElementById('placeholder').style.display  = 'none';
+    document.getElementById('result-area').style.display  = 'block';
+
+    document.getElementById('res-name').textContent = data.name;
+    document.getElementById('res-cat').textContent  = data.category;
+    document.getElementById('res-conf').textContent = data.confidence + '%';
+    document.getElementById('res-vcpu').textContent = data.vcpu;
+    document.getElementById('res-ram').textContent  = data.ram_gb;
+    document.getElementById('res-cost').textContent = '₹' + data.total_monthly_cost;
+    document.getElementById('res-users').textContent= data.max_users.toLocaleString();
+    document.getElementById('res-good').textContent    = data.good_for;
+    document.getElementById('res-notgood').textContent = data.not_good_for;
+    document.getElementById('res-tip').textContent     = data.tip;
+
+    const badge = document.getElementById('res-badge');
+    badge.textContent = data.name;
+    badge.style.backgroundColor = data.color + '22';
+    badge.style.color = data.color;
+    badge.style.borderColor = data.color;
+
+    const notice = document.getElementById('storage-notice');
+    if (data.extra_storage_cost > 0) {
+      notice.style.display = 'block';
+      notice.textContent = `⚠️ Extra storage cost: $${data.extra_storage_cost}/month (your storage need exceeds included amount)`;
+    } else { notice.style.display = 'none'; }
+
+    if (data.is_over_budget) {
+      document.getElementById('budget-warning').style.display = 'block';
+      document.getElementById('budget-warning-text').textContent =
+        `${data.name} costs ₹${data.monthly_cost}/month but your budget is ₹${data.user_budget}/month. Here is what fits your budget:`;
+      if (data.budget_alternative) {
+        const alt = data.budget_alternative;
+        document.getElementById('alternative-card').style.display = 'block';
+        document.getElementById('alt-name').textContent  = alt.name;
+        document.getElementById('alt-sub').textContent   = alt.category;
+        document.getElementById('alt-cost').textContent  = '₹' + alt.monthly_cost;
+        document.getElementById('alt-users').textContent = alt.max_users.toLocaleString();
+        document.getElementById('alt-ram').textContent   = alt.ram_gb;
+      }
+    } else {
+      document.getElementById('budget-warning').style.display   = 'none';
+      document.getElementById('alternative-card').style.display = 'none';
+    }
+
+    const barsDiv = document.getElementById('prob-bars');
+    barsDiv.innerHTML = '';
+    data.all_options.forEach(opt => {
+      const row = document.createElement('div');
+      row.className = 'prob-row';
+      const badge = opt.fits_budget
+        ? '<span class="fits-badge fits-yes">✅ fits budget</span>'
+        : '<span class="fits-badge fits-no">❌ over budget</span>';
+      row.innerHTML = `
+        <div class="prob-header">
+          <span>${opt.name} ${badge}</span>
+          <span style="color:${opt.color}; font-weight:bold;">${opt.probability}%</span>
+        </div>
+        <div class="prob-track">
+          <div class="prob-fill" style="width:${opt.probability}%; background:${opt.color};"></div>
+        </div>`;
+      barsDiv.appendChild(row);
+    });
+  }
+
+  function goToChat() {
+    if (!lastResult) return;
+    const q = `Explain why ${lastResult.name} was recommended. My budget is ₹${lastResult.user_budget}/month.`;
+    document.querySelectorAll('.tab-btn')[1].click();
+    document.getElementById('chat-input').value = q;
+    sendMessage();
+  }
+
+  function askQuick(text) {
+    document.getElementById('chat-input').value = text;
+    document.querySelectorAll('.tab-btn')[1].click();
+    sendMessage();
+  }
+
+  async function sendMessage() {
+    const input    = document.getElementById('chat-input');
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    addMsg('user', question, '');
+    document.getElementById('send-btn').disabled = true;
+
+    let context = '';
+    if (lastResult) {
+      context = `Recommended ${lastResult.name} (${lastResult.category}) at ₹${lastResult.monthly_cost}/month for up to ${lastResult.max_users} users. Budget: $${lastResult.user_budget}. Over budget: ${lastResult.is_over_budget}.`;
+    }
+
+    try {
+      const res  = await fetch(SERVER + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, context })
+      });
+      const data = await res.json();
+      const poweredBy = data.powered_by || 'Demo Mode';
+      addMsg('bot', data.answer, poweredBy);
+    } catch (e) {
+      addMsg('bot', '❌ Cannot reach the server.\nMake sure python backend/app.py is running.', '');
+    }
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  function addMsg(who, text, poweredBy) {
+    const area = document.getElementById('chat-msgs');
+    const div  = document.createElement('div');
+    div.className = 'msg ' + who;
+    const poweredTag = (who === 'bot' && poweredBy)
+      ? `<div class="powered-by">⚡ Powered by: ${poweredBy}</div>` : '';
+    div.innerHTML = `
+      <div class="msg-label">${who === 'user' ? '👤 You' : '💬 LLM Cloud Agent'}</div>
+      <div class="bubble">${text}${poweredTag}</div>`;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+</script>
+</body>
+</html>
