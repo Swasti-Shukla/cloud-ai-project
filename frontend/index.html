@@ -528,7 +528,13 @@ then come here and ask me to explain it!</div>
         body: JSON.stringify({ users, storage, budget, traffic })
       });
       const data = await res.json();
-      if (data.success) { lastResult = data; showResult(data); document.querySelectorAll('.tab-btn')[0].click(); }
+     if (data.success) { 
+  lastResult = data; 
+  showResult(data); 
+  document.querySelectorAll('.tab-btn')[0].click(); 
+} else {
+  alert('Error: ' + JSON.stringify(data));
+}
     } catch (e) {
       alert('❌ Cannot connect to server!\n\nMake sure you ran:\npython backend/app.py');
     }
