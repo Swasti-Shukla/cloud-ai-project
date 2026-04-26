@@ -531,7 +531,7 @@ then come here and ask me to explain it!</div>
      if (data.success) { 
   lastResult = data; 
   showResult(data); 
-  document.querySelectorAll('.tab-btn')[0].click(); 
+  switchTab('result', document.querySelectorAll('.tab-btn')[0]);
 } else {
   alert('Error: ' + JSON.stringify(data));
 }
