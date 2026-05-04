@@ -528,7 +528,14 @@ then come here and ask me to explain it!</div>
         body: JSON.stringify({ users, storage, budget, traffic })
       });
       const data = await res.json();
-     alert('Data received: ' + data.name);
+     
+     if (data.success) {
+  lastResult = data; 
+  showResult(data); 
+  switchTab('result', document.querySelectorAll('.tab-btn')[0]);
+} else {
+  alert('Error: ' + JSON.stringify(data));
+}
 if (data.success) {
   lastResult = data; 
   showResult(data); 
